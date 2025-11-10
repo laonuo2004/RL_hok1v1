@@ -1,0 +1,45 @@
+[monitor]
+# Monitor side, statistics are from the perspective of this side.
+# Type: integer, range [-1,0,1], default -1.
+# -1 represents automatic monitor side switching reporting, reflecting the average level of the red and blue sides.
+# 0 represents the blue camp, 1 represents the red camp. it will be reported as a fixed camp, reflecting the level of a single camp.
+# 监控上报的阵营。类型整型，取值范围[-1,0,1]，默认-1。
+# -1表示自动换边上报，反映红蓝方平均水平。
+# 0表示蓝方阵营，1表示红方阵营，当配置0或1时，将以固定阵营上报，反映单阵营水平。
+monitor_side = -1
+
+[episode]
+# Opponent agent.
+# Type: string, range [selfplay, common_ai, custom model id], default "selfplay".
+# 1. selfplay: Indicates self-play.
+# 2. common_ai: Indicates playing against a rule-based common AI.
+# 3. custom_model_id: Indicates playing against a custom model specified by its model ID.
+# 对手智能体。类型字符串，取值范围[selfplay, common_ai, 自定义模型id]，默认值"selfplay"。
+# 1. selfplay：自对弈
+# 2. common_ai：与基于规则的common_ai对战
+# 3. 自定义的模型id：与指定的模型对战，需要先将模型上传至模型管理，并且将模型ID配置在kaiwu.json中，然后在此处进行引用
+opponent_agent = "selfplay"
+
+# Evaluation interval (unit: games). Type: integer, value range: integer >= 0, default: 10
+# 评估间隔(单位局)，类型整型，取值范围为大于等于0的整数，默认值10。
+eval_interval = 10
+
+# Evaluation opponent type. Type: string, value range: [selfplay, common_ai, custom model ID], default: "common_ai"
+# Please refer to the opponent.agent annotation for the meaning of the value
+# 评估对手类型。类型字符串，取值范围为[selfplay, common_ai, 自定义模型id]，默认值"common_ai"。
+# 值的含义请参考opponent_agent注释。
+eval_opponent_type = "common_ai"
+
+# Blue camp lineup configuration
+# 蓝方阵容配置。
+[[lineups.blue_camp]]
+# hero_id. Type: integer, default 112: Luban No.7
+# 英雄ID。类型整数, 默认 112: 鲁班七号
+hero_id = 112
+
+# Red camp lineup configuration
+# 红方阵容配置。
+[[lineups.red_camp]]
+# hero_id. Type: integer, default 112: Luban No.7
+# 英雄ID。类型整数, 默认 112: 鲁班七号
+hero_id = 112

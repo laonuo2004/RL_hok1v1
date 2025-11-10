@@ -1,0 +1,19 @@
+[ppo]
+actor_model = "agent_ppo.agent.Agent"
+learner_model = "agent_ppo.agent.Agent"
+aisrv_model = "agent_ppo.agent.Agent"
+trainer = "kaiwudrl.server.learner.standard_trainer.StandardTrainer"
+predictor = "kaiwudrl.server.actor.standard_predictor.StandardPredictor"
+train_workflow = "agent_ppo.workflow.train_workflow.workflow"
+eval_workflow = "kaiwu_agent.hok1v1.ppo.eval_workflow.workflow"
+exam_workflow = "kaiwu_agent.hok1v1.ppo.exam_workflow.workflow"
+
+[diy]
+actor_model = "agent_diy.agent.Agent"
+learner_model = "agent_diy.agent.Agent"
+aisrv_model = "agent_diy.agent.Agent"
+trainer = "kaiwudrl.server.learner.standard_trainer.StandardTrainer"
+predictor = "kaiwudrl.server.actor.standard_predictor.StandardPredictor"
+train_workflow = "agent_diy.workflow.train_workflow.workflow"
+eval_workflow = "kaiwu_agent.hok1v1.diy.eval_workflow.workflow"
+exam_workflow = "kaiwu_agent.hok1v1.diy.exam_workflow.workflow"
