@@ -24,6 +24,7 @@ class GameConfig:
         "kill": -0.6,
         "last_hit": 0.5,
         "forward": 0.01,
+        "recall_after_kill": 1.0,    # 较高的权重，强调击杀后回城
     }
     # Time decay factor, used in reward_manager
     # 时间衰减因子，在reward_manager中使用

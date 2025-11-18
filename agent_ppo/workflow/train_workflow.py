@@ -209,7 +209,7 @@ def run_episodes(envs, agents, logger, monitor, model_file_sync_wrapper, usr_con
         # Reward initialization
         # 回报初始化
         for i in range(agent_num):
-            reward = agents[i].reward_manager.result(observation[i]["frame_state"])
+            reward = agents[i].reward_manager.result(observation[i]["frame_state"], observation[i]["observation"])
             observation[i]["reward"] = reward
             for key, value in reward.items():
                 if key in total_reward_dicts[i]:
@@ -266,7 +266,7 @@ def run_episodes(envs, agents, logger, monitor, model_file_sync_wrapper, usr_con
             # Reward generation
             # 计算回报，作为当前环境状态observation的一部分
             for i in range(agent_num):
-                reward = agents[i].reward_manager.result(observation[i]["frame_state"])
+                reward = agents[i].reward_manager.result(observation[i]["frame_state"], observation[i]["observation"])
                 observation[i]["reward"] = reward
                 for key, value in reward.items():
                     if key in total_reward_dicts[i]:

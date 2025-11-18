@@ -41,6 +41,7 @@ class GameRewardManager:
         self.main_hero_organ_hp = -1
         self.m_reward_value = {}
         self.m_last_frame_no = -1
+        # 各个奖励的 名称-奖励值 映射map
         self.m_cur_calc_frame_map = init_calc_frame_map()
         self.m_main_calc_frame_map = init_calc_frame_map()
         self.m_enemy_calc_frame_map = init_calc_frame_map()
@@ -48,6 +49,8 @@ class GameRewardManager:
         self.time_scale_arg = GameConfig.TIME_SCALE_ARG
         self.m_main_hero_config_id = -1
         self.m_each_level_max_exp = {}
+
+        self.observation = None
 
     # Used to initialize the maximum experience value for each agent level
     # 用于初始化智能体各个等级的最大经验值
@@ -68,7 +71,8 @@ class GameRewardManager:
         self.m_each_level_max_exp[13] = 1778
         self.m_each_level_max_exp[14] = 1984
 
-    def result(self, frame_data):
+    def result(self, frame_data, observation):
+        self.observation = observation
         self.init_max_exp_of_each_hero()
         self.frame_data_process(frame_data)
         self.get_reward(frame_data, self.m_reward_value)
@@ -94,6 +98,7 @@ class GameRewardManager:
                 main_hero = hero
             else:
                 enemy_hero = hero
+        # 双方的血量、最大血量
         main_hero_hp = main_hero["actor_state"]["hp"]
         main_hero_max_hp = main_hero["actor_state"]["max_hp"]
         main_hero_ep = main_hero["actor_state"]["values"]["ep"]
@@ -172,6 +177,9 @@ class GameRewardManager:
             # 前进
             elif reward_name == "forward":
                 reward_struct.cur_frame_value = self.calculate_forward(main_hero, main_tower, enemy_tower)
+            # 新增：击杀后回城奖励
+            elif reward_name == "recall_after_kill":
+                reward_struct.cur_frame_value = self.calculate_recall_after_kill(frame_data, main_hero, enemy_hero, main_tower)
 
     # Calculate the total amount of experience gained using agent level and current experience value
     # 用智能体等级和当前经验值，计算获得经验值的总量
@@ -286,3 +294,36 @@ class GameRewardManager:
             reward_sum += reward_struct.value * reward_struct.weight
             reward_dict[reward_name] = reward_struct.value
         reward_dict["reward_sum"] = reward_sum
+
+    def calculate_recall_after_kill(self, frame_data, main_hero, enemy_hero, main_tower):
+        """计算击杀后回城奖励"""
+        recall_reward = 0.0
+        
+        # 检查敌方英雄是否死亡
+        enemy_died = enemy_hero["actor_state"]["hp"] <= 0
+
+        # 检查是否执行回城动作
+        recall_btn = main_hero["skill_state"]["slot_states"][6]
+        is_recalling = not recall_btn["usable"] or recall_btn["succUsedInFrame"] > 0
+
+        # 获取游戏前/中/后期信息
+        game_stage = self.observation[700:705]
+        game_time = game_stage.index(1.0)
+        
+        # 如果在敌方死亡后安全回城，给予奖励
+        if enemy_died and is_recalling and game_time <= 2: 
+            recall_reward += 1.0
+            # # 检查是否在安全位置回城（远离敌方防御塔）
+            # hero_pos = (
+            #     main_hero["actor_state"]["location"]["x"],
+            #     main_hero["actor_state"]["location"]["z"],
+            # )
+            # main_tower_pos = (main_tower["location"]["x"], main_tower["location"]["z"])
+            
+            # distance_to_tower = math.dist(hero_pos, main_tower_pos)
+
+            # if distance_to_tower < 20 or main_hero["isInGrass"]:  # 安全回程 ?
+            #     recall_reward += 1.0
+
+        
+        return recall_reward
