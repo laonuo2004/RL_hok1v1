@@ -13,11 +13,15 @@ import numpy as np
 import collections
 from agent_ppo.conf.conf import Config
 
-
+################################################################
+# 数据结构定义 - 不能删除这些属性，可以添加新属性
+################################################################
+#NOTE: 不能删除已有属性，ObsData是agent.predict的输入，必须包含这些字段
 SampleData = create_cls("SampleData", npdata=None)
 
 ObsData = create_cls("ObsData", feature=None, legal_action=None, lstm_cell=None, lstm_hidden=None)
 
+#NOTE: 不能删除已有属性，ActData是agent.predict的输出，必须包含action和d_action
 ActData = create_cls(
     "ActData",
     action=None,
@@ -28,14 +32,19 @@ ActData = create_cls(
     lstm_hidden=None,
 )
 
+#NOTE: 不用改，默认动作（不执行任何操作）
 NONE_ACTION = [0, 15, 15, 15, 15, 0]
 
-
+################################################################
+# 样本处理函数 - 平台会调用，不能改函数签名
+################################################################
+#NOTE: 不能改函数签名，平台会调用此函数进行样本处理
 @attached
 def sample_process(collector):
     return collector.sample_process()
 
 
+#NOTE: 不用改，workflow中调用此函数构建帧数据
 # Create the sample for the current frame
 # 创建当前帧的样本
 def build_frame(agent, state_dict):
@@ -81,6 +90,7 @@ def build_frame(agent, state_dict):
     return frame
 
 
+#NOTE: 不用改，内部辅助函数，用于更新legal_action
 # Construct legal_action based on the actual action taken
 # 根据实际采用的action，构建legal_action
 def _update_legal_action(original_la, action):
@@ -92,7 +102,10 @@ def _update_legal_action(original_la, action):
     target_la = target_la.reshape([top_size, target_size])[action[0]]
     return np.concatenate([fix_part, target_la], axis=0)
 
-
+################################################################
+# FrameCollector 类 - 不用改，已实现好的样本收集和处理逻辑
+################################################################
+#NOTE: 不用改，FrameCollector已经实现了GAE计算和样本格式化，可以直接使用
 class FrameCollector:
     def __init__(self, num_agents):
         self._data_shapes = Config.data_shapes
@@ -240,12 +253,15 @@ class FrameCollector:
     def __len__(self):
         return max([len(agent_samples) for agent_samples in self.rl_data_map])
 
-
+################################################################
+# 数据转换函数 - 分布式训练必需，不能改函数签名
+################################################################
+#NOTE: 不能改函数签名，分布式训练时用于将SampleData编码为numpy数组以便网络传输
 @attached
 def SampleData2NumpyData(g_data):
     return g_data.npdata
 
-
+#NOTE: 不能改函数签名，分布式训练时用于将numpy数组解码为SampleData
 @attached
 def NumpyData2SampleData(s_data):
     return SampleData(npdata=s_data)

@@ -20,7 +20,10 @@ from typing import Dict, List, Tuple
 
 from agent_ppo.conf.conf import DimConfig, Config
 
-
+################################################################
+# 模型类 - 可以修改网络结构，但需要同步修改conf.py中的维度配置
+################################################################
+#NOTE: 可以修改模型结构（MLP层数、LSTM大小等），但需要保证forward和compute_loss的输入输出格式正确
 class Model(nn.Module):
     def __init__(self):
         super(Model, self).__init__()
@@ -180,6 +183,9 @@ class Model(nn.Module):
 
         self.target_embed_mlp = make_fc_layer(self.target_embed_dim, self.target_embed_dim, use_bias=False)
 
+    #NOTE: 可以修改forward的网络结构，但输入输出格式不能变
+    #输入：[feature_vec, lstm_hidden_init, lstm_cell_init]
+    #输出：result_list（包含各动作维度的logits和value）
     def forward(self, data_list, inference=False):
         feature_vec, lstm_hidden_init, lstm_cell_init = data_list
 
@@ -395,6 +401,7 @@ class Model(nn.Module):
         else:
             return result_list
 
+    #NOTE: 可以修改损失函数计算逻辑（PPO的三个loss：value_loss, policy_loss, entropy_loss）
     def compute_loss(self, data_list, rst_list):
         seri_vec = data_list[0].reshape(-1, self.data_split_shape[0])
         usq_reward = data_list[1].reshape(-1, self.data_split_shape[1])
@@ -559,7 +566,10 @@ class Model(nn.Module):
         self.lstm_time_steps = 1
         self.eval()
 
-
+################################################################
+# 工具函数 - 不用改，已实现好的辅助函数
+################################################################
+#NOTE: 不用改，已实现好的创建全连接层的工具函数
 def make_fc_layer(in_features: int, out_features: int, use_bias=True):
     """Wrapper function to create and initialize a linear layer
 
@@ -587,7 +597,7 @@ def make_fc_layer(in_features: int, out_features: int, use_bias=True):
 
     return fc_layer
 
-
+#NOTE: 不用改，已实现好的MLP（多层感知机）类，可以直接使用
 class MLP(nn.Module):
     def __init__(
         self,

@@ -83,6 +83,7 @@ class Agent(BaseAgent):
 
         super().__init__(agent_type, device, logger, monitor)
 
+    #NOTE: 不用改，学习率衰减函数已经实现好了（可根据需求修改衰减策略）
     def lr_lambda(self, step):
         # Define learning rate decay function
         # 定义学习率衰减函数
@@ -91,6 +92,10 @@ class Agent(BaseAgent):
         else:
             return 1.0 - ((1.0 - self.target_lr / self.lr) * step / self.target_step)
 
+    ################################################################
+    # 内部推理方法 - 不用改，模型推理逻辑已实现好
+    ################################################################
+    #NOTE: 不用改，这个方法完成模型推理的完整流程（从ObsData到ActData）
     def _model_inference(self, list_obs_data):
         # Using the network for inference
         # 使用网络进行推理
@@ -140,6 +145,11 @@ class Agent(BaseAgent):
             )
         return list_act_data
 
+    ################################################################
+    # 平台接口方法 - 不能改方法签名和返回值类型，这些是框架要求的接口
+    ################################################################
+    #NOTE: 不能改方法签名 predict(self, observation)，平台在分布式训练时会调用此接口
+    #NOTE: 必须返回 [ActData(...)] 格式
     @predict_wrapper
     def predict(self, observation):
         # The remote prediction will not call agent.reset in the workflow. Users can use the game_id to determine whether a new environment
@@ -162,6 +172,8 @@ class Agent(BaseAgent):
         action = self.action_process(observation, act_data, False)
         return [ActData(action=action)]
 
+    #NOTE: 不能改方法签名 exploit(self, observation)，平台在评估任务时会调用此接口
+    #NOTE: 必须返回 [ActData(...)] 格式
     @exploit_wrapper
     def exploit(self, observation):
         # Evaluation task will not call agent.reset in the workflow. Users can use the game_id to determine whether a new environment
@@ -184,6 +196,10 @@ class Agent(BaseAgent):
         d_action = self.action_process(observation, act_data, False)
         return [ActData(d_action=d_action)]
 
+    ################################################################
+    # workflow 调用的辅助方法 - 不用改，已经处理好了分布式/单机的逻辑
+    ################################################################
+    #NOTE: 不用改，workflow中训练时调用此方法，已处理好分布式/单机的区别
     def train_predict(self, observation):
         # Call agent.predict for distributed model inference
         # 调用agent.predict，执行分布式模型推理
@@ -196,6 +212,7 @@ class Agent(BaseAgent):
         self.update_status(obs_data, act_data)
         return self.action_process(observation, act_data, True)
 
+    #NOTE: 不用改，workflow中评估时调用此方法，已处理好分布式/单机的区别
     def eval_predict(self, observation):
         # Call agent.predict for distributed model inference
         # 调用agent.predict，执行分布式模型推理
@@ -208,6 +225,10 @@ class Agent(BaseAgent):
         self.update_status(obs_data, act_data)
         return self.action_process(observation, act_data, False)
 
+    ################################################################
+    # 数据处理方法 - 可以修改，根据需求自定义数据处理逻辑
+    ################################################################
+    #NOTE: 可以修改，将ActData转换为环境可用的动作格式，可以添加规则后处理
     def action_process(self, observation, act_data, is_stochastic):
         if is_stochastic:
             # Use stochastic sampling action
@@ -218,6 +239,7 @@ class Agent(BaseAgent):
             # 采用最大概率动作 d_action
             return act_data.d_action
 
+    #NOTE: 可以修改，将环境observation转换为ObsData，可以自定义特征处理方式
     def observation_process(self, observation):
         feature_vec, legal_action = (
             observation["observation"],
@@ -227,10 +249,13 @@ class Agent(BaseAgent):
             feature=feature_vec, legal_action=legal_action, lstm_cell=self.lstm_cell, lstm_hidden=self.lstm_hidden
         )
 
+    #NOTE: 不能改方法签名 learn(self, list_sample_data)，平台会调用此接口进行训练
     @learn_wrapper
     def learn(self, list_sample_data):
         return self.algorithm.learn(list_sample_data)
 
+    #NOTE: 不能改方法签名 save_model(self, path=None, id="1")，平台会调用此接口保存模型
+    #NOTE: 文件名必须包含 "model.ckpt-{id}" 格式
     @save_model_wrapper
     def save_model(self, path=None, id="1"):
         # To save the model, it can consist of multiple files, and it is important to ensure that
@@ -240,6 +265,7 @@ class Agent(BaseAgent):
         torch.save(self.model.state_dict(), model_file_path)
         self.logger.info(f"save model {model_file_path} successfully")
 
+    #NOTE: 不能改方法签名 load_model(self, path=None, id="1")，平台会调用此接口加载模型
     @load_model_wrapper
     def load_model(self, path=None, id="1"):
         # When loading the model, you can load multiple files, and it is important to ensure that
@@ -258,6 +284,7 @@ class Agent(BaseAgent):
             self.cur_model_name = model_file_path
             self.logger.info(f"load model {model_file_path} successfully")
 
+    #NOTE: 不用改，每局游戏开始时重置agent状态
     def reset(self, hero_camp, player_id):
         self.hero_camp = hero_camp
         self.player_id = player_id
@@ -265,12 +292,17 @@ class Agent(BaseAgent):
         self.lstm_cell = np.zeros([self.lstm_unit_size])
         self.reward_manager = GameRewardManager(player_id)
 
+    #NOTE: 不用改，更新agent的内部状态（用于保存当前帧数据）
     def update_status(self, obs_data, act_data):
         self.obs_data = obs_data
         self.act_data = act_data
         self.lstm_cell = act_data.lstm_cell
         self.lstm_hidden = act_data.lstm_hidden
 
+    ################################################################
+    # 动作采样相关方法 - 可以修改采样策略，但注意保持Action Mask机制
+    ################################################################
+    #NOTE: 可以修改采样策略，但必须保持Action Mask机制（legal_action过滤）
     # get final executable actions
     def _sample_masked_action(self, logits, legal_action):
         """
@@ -327,6 +359,7 @@ class Agent(BaseAgent):
 
         return [prob_list], action_list, d_action_list
 
+    #NOTE: 不用改，已实现好的Legal Action Mask的softmax，将非法动作概率设为极小值
     def _legal_soft_max(self, input_hidden, legal_action):
         _lsm_const_w, _lsm_const_e = 1e20, 1e-5
         _lsm_const_e = 0.00001
@@ -338,6 +371,7 @@ class Agent(BaseAgent):
         probs = tmp / np.sum(tmp, keepdims=True)
         return probs
 
+    #NOTE: 不用改，已实现好的动作采样方法（随机采样或确定性采样）
     def _legal_sample(self, probs, legal_action=None, use_max=False):
         # Sample with probability, input probs should be 1D array
         # 根据概率采样，输入的probs应该是一维数组
@@ -346,6 +380,7 @@ class Agent(BaseAgent):
 
         return np.argmax(np.random.multinomial(1, probs, size=1))
 
+    #NOTE: 不用改，workflow中本地模式加载模型时调用此方法
     def load_model_local(self, model_file_path, idx):
         # When loading the local model, you can load multiple files, and it is important to ensure that
         # each filename matches the one used during the save_model process.
