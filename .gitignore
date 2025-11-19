@@ -1,4 +1,14 @@
+# IDE（Cursor、VSCode）相关
+
+.cursorignore
 .cursorindexingignore
 .specstory
 .vscode/
+
+# 项目相关
+
 会议录屏/
+
+# BASE64编码，用于同步项目到开悟平台上
+
+*.txt
