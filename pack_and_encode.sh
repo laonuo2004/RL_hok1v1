@@ -36,6 +36,7 @@ EXCLUDE_PATTERNS=(
   "--exclude=$ENCODED_FILE"
   "--exclude=$ARCHIVE_FILE"
   "--exclude=$(basename "$0")" # 排除此脚本自身
+  "--exclude=docs/*" # 排除 docs 目录
 )
 
 # --- 主逻辑 ---
