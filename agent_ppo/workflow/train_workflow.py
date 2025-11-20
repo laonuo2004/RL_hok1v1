@@ -277,10 +277,12 @@ def run_episodes(envs, agents, logger, monitor, model_file_sync_wrapper, usr_con
             step += 1
 
             now = time.time()
-            if now - last_report_monitor_time >= 60:
+            if monitor and now - last_report_monitor_time >= 60:
+                frontline_follow_reward = total_reward_dicts[train_agent_id].get("frontline_follow", 0.0)
                 monitor_data = {
                     "actor_predict_succ_cnt": predict_success_count,
                     "actor_load_last_model_succ_cnt": load_model_success_count,
+                    "diy_1": frontline_follow_reward,
                 }
 
                 monitor.put_data({os.getpid(): monitor_data})
@@ -302,9 +304,11 @@ def run_episodes(envs, agents, logger, monitor, model_file_sync_wrapper, usr_con
                             reward=observation[index]["reward"]["reward_sum"],
                         )
 
-                monitor_data = {}
                 if monitor and is_eval:
-                    monitor_data["reward"] = round(total_reward_dicts[train_agent_id]["reward_sum"], 2)
+                    monitor_data = {
+                        "reward": round(total_reward_dicts[train_agent_id]["reward_sum"], 2),
+                        "diy_2": total_reward_dicts[train_agent_id].get("frontline_follow", 0.0),
+                    }
                     monitor.put_data({os.getpid(): monitor_data})
 
                 # Sample process
