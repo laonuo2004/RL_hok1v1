@@ -28,7 +28,7 @@ eval_interval = 10
 # Please refer to the opponent.agent annotation for the meaning of the value
 # 评估对手类型。类型字符串，取值范围为[selfplay, common_ai, 自定义模型id]，默认值"common_ai"。
 # 值的含义请参考opponent_agent注释。
-eval_opponent_type = "common_ai"
+eval_opponent_type = "154015"
 
 # Blue camp lineup configuration
 # 蓝方阵容配置。
