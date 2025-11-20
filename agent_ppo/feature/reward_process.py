@@ -48,7 +48,7 @@ class GameRewardManager:
         self.time_scale_arg = GameConfig.TIME_SCALE_ARG
         self.m_main_hero_config_id = -1
         self.m_each_level_max_exp = {}
-        self.frontline_follow_radius = 300
+        self.frontline_follow_sigma = 400.0
 
     # Used to initialize the maximum experience value for each agent level
     # 用于初始化智能体各个等级的最大经验值
@@ -237,11 +237,9 @@ class GameRewardManager:
             return 0.0
 
         hero_to_frontline = math.dist(hero_pos, frontline_unit_pos)
-        radius = self.frontline_follow_radius
-        if hero_to_frontline >= radius:
-            return 0.0
-
-        return max(0.0, 1.0 - hero_to_frontline / radius)
+        sigma = max(self.frontline_follow_sigma, 1e-6)
+        gaussian_reward = math.exp(-((hero_to_frontline ** 2) / (2 * sigma * sigma)))
+        return gaussian_reward
 
     # Calculate the reward item information for both sides using frame data
     # 用帧数据来计算两边的奖励子项信息
