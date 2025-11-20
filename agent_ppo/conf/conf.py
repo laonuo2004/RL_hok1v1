@@ -31,6 +31,7 @@ class GameConfig:
         "kill": -0.6,           # 击杀
         "last_hit": 0.5,        # 补刀
         "forward": 0.01,        # 推进
+        "frontline_follow": 8.0,  # 跟随己方最前线单位
     }
     # Time decay factor, used in reward_manager
     # 时间衰减因子，在reward_manager中使用

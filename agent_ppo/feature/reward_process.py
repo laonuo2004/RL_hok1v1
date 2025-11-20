@@ -48,6 +48,7 @@ class GameRewardManager:
         self.time_scale_arg = GameConfig.TIME_SCALE_ARG
         self.m_main_hero_config_id = -1
         self.m_each_level_max_exp = {}
+        self.frontline_follow_radius = 300
 
     # Used to initialize the maximum experience value for each agent level
     # 用于初始化智能体各个等级的最大经验值
@@ -172,6 +173,10 @@ class GameRewardManager:
             # 前进
             elif reward_name == "forward":
                 reward_struct.cur_frame_value = self.calculate_forward(main_hero, main_tower, enemy_tower)
+            # Frontline follow
+            # 跟随己方最前线单位
+            elif reward_name == "frontline_follow":
+                reward_struct.cur_frame_value = self.calculate_frontline_follow(main_hero, npc_list, enemy_tower)
 
     # Calculate the total amount of experience gained using agent level and current experience value
     # 用智能体等级和当前经验值，计算获得经验值的总量
@@ -197,6 +202,46 @@ class GameRewardManager:
         if main_hero["actor_state"]["hp"] / main_hero["actor_state"]["max_hp"] > 0.99 and dist_hero2emy > dist_main2emy:
             forward_value = (dist_main2emy - dist_hero2emy) / dist_main2emy
         return forward_value
+
+    # Calculate reward encouraging following the most forward ally unit
+    # 计算鼓励贴近己方最前线单位的奖励
+    def calculate_frontline_follow(self, main_hero, npc_list, enemy_tower):
+        if main_hero is None or enemy_tower is None:
+            return 0.0
+
+        hero_pos = (
+            main_hero["actor_state"]["location"]["x"],
+            main_hero["actor_state"]["location"]["z"],
+        )
+        enemy_tower_pos = (enemy_tower["location"]["x"], enemy_tower["location"]["z"])
+
+        frontline_unit_pos = None
+        closest_dist = None
+
+        for npc in npc_list:
+            if npc.get("camp") != self.main_hero_camp:
+                continue
+            sub_type = npc.get("sub_type")
+            if sub_type not in ("ACTOR_SUB_SOLDIER", "ACTOR_SUB_TOWER"):
+                continue
+            npc_loc = npc.get("location")
+            if npc_loc is None:
+                continue
+            npc_pos = (npc_loc["x"], npc_loc["z"])
+            dist_to_enemy_tower = math.dist(npc_pos, enemy_tower_pos)
+            if closest_dist is None or dist_to_enemy_tower < closest_dist:
+                closest_dist = dist_to_enemy_tower
+                frontline_unit_pos = npc_pos
+
+        if frontline_unit_pos is None:
+            return 0.0
+
+        hero_to_frontline = math.dist(hero_pos, frontline_unit_pos)
+        radius = self.frontline_follow_radius
+        if hero_to_frontline >= radius:
+            return 0.0
+
+        return max(0.0, 1.0 - hero_to_frontline / radius)
 
     # Calculate the reward item information for both sides using frame data
     # 用帧数据来计算两边的奖励子项信息
@@ -266,6 +311,8 @@ class GameRewardManager:
                     )
                     reward_struct.value = reward_struct.cur_frame_value - reward_struct.last_frame_value
             elif reward_name == "forward":
+                reward_struct.value = self.m_main_calc_frame_map[reward_name].cur_frame_value
+            elif reward_name == "frontline_follow":
                 reward_struct.value = self.m_main_calc_frame_map[reward_name].cur_frame_value
             elif reward_name == "last_hit":
                 reward_struct.value = self.m_main_calc_frame_map[reward_name].cur_frame_value
