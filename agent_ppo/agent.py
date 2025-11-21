@@ -16,6 +16,7 @@ torch.set_num_interop_threads(1)
 import os
 from agent_ppo.model.model import Model
 from agent_ppo.feature.definition import *
+from agent_ppo.feature.custom_feature import CUSTOM_FEATURE_SIZE, encode_monster_feature
 import numpy as np
 from kaiwu_agent.agent.base_agent import (
     BaseAgent,
@@ -241,12 +242,20 @@ class Agent(BaseAgent):
 
     #NOTE: 可以修改，将环境observation转换为ObsData，可以自定义特征处理方式
     def observation_process(self, observation):
-        feature_vec, legal_action = (
-            observation["observation"],
-            observation["legal_action"],
-        )
+        feature_vec = np.asarray(observation["observation"], dtype=np.float32).copy()
+        legal_action = observation["legal_action"]
+
+        custom_feature = encode_monster_feature(observation, self.hero_camp, self.player_id)
+        if feature_vec.shape[0] >= CUSTOM_FEATURE_SIZE:
+            feature_vec[-CUSTOM_FEATURE_SIZE:] = custom_feature
+        else:
+            feature_vec = np.concatenate([feature_vec, custom_feature], axis=0)
+
         return ObsData(
-            feature=feature_vec, legal_action=legal_action, lstm_cell=self.lstm_cell, lstm_hidden=self.lstm_hidden
+            feature=feature_vec,
+            legal_action=legal_action,
+            lstm_cell=self.lstm_cell,
+            lstm_hidden=self.lstm_hidden,
         )
 
     #NOTE: 不能改方法签名 learn(self, list_sample_data)，平台会调用此接口进行训练
