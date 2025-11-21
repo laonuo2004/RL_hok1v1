@@ -9,6 +9,7 @@ Author: Tencent AI Arena Authors
 
 
 import torch
+import math
 
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
@@ -228,16 +229,27 @@ class Agent(BaseAgent):
     ################################################################
     # 数据处理方法 - 可以修改，根据需求自定义数据处理逻辑
     ################################################################
+    MOVE_BUTTON_INDEX = 1
+    MOVE_GRID_SIZE = 16
+    MOVE_CENTER_INDEX = MOVE_GRID_SIZE // 2
+    TOWER_PROTECT_RADIUS = 8800
+    ENEMY_HERO_SAFE_RADIUS = 8000
+    DESIRED_TOWER_RANGE = 8000
+
     #NOTE: 可以修改，将ActData转换为环境可用的动作格式，可以添加规则后处理
     def action_process(self, observation, act_data, is_stochastic):
-        if is_stochastic:
-            # Use stochastic sampling action
-            # 采用随机采样动作 action
-            return act_data.action
-        else:
-            # Use the action with the highest probability
-            # 采用最大概率动作 d_action
-            return act_data.d_action
+        base_action = act_data.action if is_stochastic else act_data.d_action
+        if base_action is None:
+            return base_action
+
+        if not isinstance(base_action, list):
+            base_action = list(base_action)
+
+        override_action = self._tower_push_override(observation, base_action)
+        if override_action is not None:
+            return override_action
+
+        return base_action
 
     #NOTE: 可以修改，将环境observation转换为ObsData，可以自定义特征处理方式
     def observation_process(self, observation):
@@ -298,6 +310,112 @@ class Agent(BaseAgent):
         self.act_data = act_data
         self.lstm_cell = act_data.lstm_cell
         self.lstm_hidden = act_data.lstm_hidden
+
+    ################################################################
+    # 推塔规则相关辅助方法
+    ################################################################
+    def _tower_push_override(self, observation, current_action):
+        if observation is None or len(current_action) < 6:
+            return None
+
+        frame_state = observation.get("frame_state") or {}
+        hero_states = frame_state.get("hero_states") or []
+        npc_states = frame_state.get("npc_states") or []
+
+        main_hero = None
+        enemy_hero = None
+        for hero in hero_states:
+            actor_state = hero.get("actor_state") or {}
+            if hero.get("player_id") == self.player_id:
+                main_hero = hero
+            elif actor_state.get("camp") != self.hero_camp:
+                enemy_hero = hero
+
+        if main_hero is None:
+            return None
+
+        enemy_tower = None
+        for npc in npc_states:
+            if npc.get("sub_type") == "ACTOR_SUB_TOWER" and npc.get("camp") != self.hero_camp:
+                enemy_tower = npc
+                break
+
+        if enemy_tower is None:
+            return None
+
+        tower_pos = self._extract_position(enemy_tower)
+        hero_pos = self._extract_position(main_hero, is_hero=True)
+        if tower_pos is None or hero_pos is None:
+            return None
+
+        if not self._has_ally_minion_near_tower(npc_states, tower_pos):
+            return None
+
+        enemy_pos = self._extract_position(enemy_hero, is_hero=True) if enemy_hero else None
+        if enemy_pos is not None:
+            dist_enemy = self._distance(hero_pos, enemy_pos)
+            if dist_enemy is not None and dist_enemy <= self.ENEMY_HERO_SAFE_RADIUS:
+                return None
+
+        dist_tower = self._distance(hero_pos, tower_pos)
+        if dist_tower is None or dist_tower <= self.DESIRED_TOWER_RANGE:
+            return None
+
+        move_x, move_z = self._encode_direction(hero_pos, tower_pos)
+        override_action = current_action.copy()
+        override_action[0] = self.MOVE_BUTTON_INDEX
+        override_action[1] = move_x
+        override_action[2] = move_z
+        override_action[3] = self.MOVE_CENTER_INDEX
+        override_action[4] = self.MOVE_CENTER_INDEX
+        override_action[5] = 0
+        return override_action
+
+    def _has_ally_minion_near_tower(self, npc_states, tower_pos):
+        for npc in npc_states:
+            if npc.get("camp") != self.hero_camp or npc.get("sub_type") != "ACTOR_SUB_SOLDIER":
+                continue
+            minion_pos = self._extract_position(npc)
+            if minion_pos is None:
+                continue
+            dist = self._distance(minion_pos, tower_pos)
+            if dist is not None and dist <= self.TOWER_PROTECT_RADIUS:
+                return True
+        return False
+
+    def _extract_position(self, entity, is_hero=False):
+        if entity is None:
+            return None
+        if is_hero:
+            actor_state = entity.get("actor_state") or {}
+            location = actor_state.get("location") or {}
+        else:
+            location = entity.get("location") or {}
+        x = location.get("x")
+        z = location.get("z")
+        if x is None or z is None:
+            return None
+        return float(x), float(z)
+
+    def _distance(self, pos_a, pos_b):
+        if pos_a is None or pos_b is None:
+            return None
+        return math.hypot(pos_a[0] - pos_b[0], pos_a[1] - pos_b[1])
+
+    def _encode_direction(self, origin, target):
+        dx = target[0] - origin[0]
+        dz = target[1] - origin[1]
+        norm = math.hypot(dx, dz)
+        if norm < 1e-5:
+            return self.MOVE_CENTER_INDEX, self.MOVE_CENTER_INDEX
+        dx /= norm
+        dz /= norm
+        scale = self.MOVE_GRID_SIZE - 1
+        idx = int(round(((dx + 1) / 2) * scale))
+        idz = int(round(((dz + 1) / 2) * scale))
+        idx = max(0, min(scale, idx))
+        idz = max(0, min(scale, idz))
+        return idx, idz
 
     ################################################################
     # 动作采样相关方法 - 可以修改采样策略，但注意保持Action Mask机制
