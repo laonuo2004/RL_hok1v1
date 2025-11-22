@@ -234,9 +234,9 @@ class Agent(BaseAgent):
     MOVE_CENTER_INDEX = MOVE_GRID_SIZE // 2
     TOWER_PROTECT_RADIUS = 8800
     ENEMY_HERO_SAFE_RADIUS = 15000
-    DESIRED_TOWER_RANGE = 8000
+    DEFAULT_ATTACK_RANGE = 8000
     MAX_RULE_TRIGGER_RANGE = 15000
-    MIN_MINION_COUNT = 2
+    DEFAULT_MINION_COUNT = 2
 
     #NOTE: 可以修改，将ActData转换为环境可用的动作格式，可以添加规则后处理
     def action_process(self, observation, act_data, is_stochastic):
@@ -355,7 +355,13 @@ class Agent(BaseAgent):
         if dist_tower is None or dist_tower > self.MAX_RULE_TRIGGER_RANGE:
             return None
 
-        if not self._has_ally_minion_near_tower(npc_states, tower_pos):
+        actor_state = main_hero.get("actor_state") or {}
+        attack_range = actor_state.get("attack_range")
+        if attack_range is None or attack_range <= 0:
+            attack_range = self.DEFAULT_ATTACK_RANGE
+        required_minion_cnt = 0 if attack_range > self.TOWER_PROTECT_RADIUS else self.DEFAULT_MINION_COUNT
+
+        if not self._has_ally_minion_near_tower(npc_states, tower_pos, required_minion_cnt):
             return None
 
         enemy_pos = self._extract_position(enemy_hero, is_hero=True) if enemy_hero else None
@@ -364,8 +370,14 @@ class Agent(BaseAgent):
             if dist_enemy is not None and dist_enemy <= self.ENEMY_HERO_SAFE_RADIUS:
                 return None
 
-        if dist_tower <= self.DESIRED_TOWER_RANGE:
+        if self._has_enemy_minion_in_range(npc_states, hero_pos, attack_range):
             return None
+
+        if dist_tower <= attack_range:
+            attack_action = current_action.copy()
+            attack_action[0] = 3
+            attack_action[5] = 7
+            return attack_action
 
         move_x, move_z = self._encode_direction(hero_pos, tower_pos)
         override_action = current_action.copy()
@@ -375,15 +387,11 @@ class Agent(BaseAgent):
         override_action[3] = 4
         override_action[4] = 2
         override_action[5] = 0
-        # print("hero_pos: ", hero_pos)
-        # print("tower_pos: ", tower_pos)
-        # print("move_x: ", move_x)
-        # print("move_z: ", move_z)
-        # with open("override_action.txt", "a") as f:
-        #     f.write(f"hero_pos: {hero_pos}, tower_pos: {tower_pos}, move_x: {move_x}, move_z: {move_z}\n")
         return override_action
 
-    def _has_ally_minion_near_tower(self, npc_states, tower_pos):
+    def _has_ally_minion_near_tower(self, npc_states, tower_pos, required_cnt):
+        if required_cnt <= 0:
+            return True
         minion_cnt = 0
         for npc in npc_states:
             if npc.get("camp") != self.hero_camp_str or npc.get("sub_type") != "ACTOR_SUB_SOLDIER":
@@ -394,8 +402,22 @@ class Agent(BaseAgent):
             dist = self._distance(minion_pos, tower_pos)
             if dist is not None and dist <= self.TOWER_PROTECT_RADIUS:
                 minion_cnt += 1
-                if minion_cnt >= self.MIN_MINION_COUNT:
+                if minion_cnt >= required_cnt:
                     return True
+        return False
+
+    def _has_enemy_minion_in_range(self, npc_states, hero_pos, attack_range):
+        if attack_range is None or attack_range <= 0:
+            return False
+        for npc in npc_states:
+            if npc.get("camp") == self.hero_camp_str or npc.get("sub_type") != "ACTOR_SUB_SOLDIER":
+                continue
+            pos = self._extract_position(npc)
+            if pos is None:
+                continue
+            dist = self._distance(hero_pos, pos)
+            if dist is not None and dist <= attack_range:
+                return True
         return False
 
     def _extract_position(self, entity, is_hero=False):
