@@ -233,11 +233,11 @@ class Agent(BaseAgent):
     MOVE_GRID_SIZE = 16
     MOVE_CENTER_INDEX = MOVE_GRID_SIZE // 2
     TOWER_PROTECT_RADIUS = 8800
-    ENEMY_HERO_SAFE_RADIUS = 15000
+    ENEMY_HERO_SAFE_RADIUS = 12000
     DEFAULT_ATTACK_RANGE = 8000
-    MAX_RULE_TRIGGER_RANGE = 15000
+    MAX_RULE_TRIGGER_RANGE = 16000
     DEFAULT_MINION_COUNT = 2
-    RETREAT_BUFFER = 500
+    RETREAT_BUFFER = 1000
 
     #NOTE: 可以修改，将ActData转换为环境可用的动作格式，可以添加规则后处理
     def action_process(self, observation, act_data, is_stochastic):
@@ -326,6 +326,13 @@ class Agent(BaseAgent):
         hero_states = frame_state.get("hero_states") or []
         npc_states = frame_state.get("npc_states") or []
 
+        # 条件1：前8000帧(大约4分半左右)不执行推塔策略，因为收益较低
+        # 后期双方复活时间较长，英雄实力也较强，推塔是很轻松的；
+        # 但是看录像经常看到双方各占据一角互刷兵线，推塔积极性很低，就看谁先挪到能打到塔的地方谁就赢；
+        # 所以希望该规则能够强化后期推塔的积极性
+        if frame_state["frameNo"] < 8000:
+            return None
+
         main_hero = None
         enemy_hero = None
         for hero in hero_states:
@@ -359,30 +366,38 @@ class Agent(BaseAgent):
         required_minion_cnt = 0 if attack_range > self.TOWER_PROTECT_RADIUS else self.DEFAULT_MINION_COUNT
 
         dist_tower = self._distance(hero_pos, tower_pos)
+        # 条件2：如果超出最大规则触发范围，则规则不生效
         if dist_tower is None or dist_tower > self.MAX_RULE_TRIGGER_RANGE:
             return None
 
+        # 条件3：敌方防御塔内有己方小兵作为肉盾，默认至少2个，如果英雄射程大于防御塔射程的话，则需要的肉盾为0个
         has_minion_support = self._has_ally_minion_near_tower(npc_states, tower_pos, required_minion_cnt)
 
         enemy_pos = self._extract_position(enemy_hero, is_hero=True) if enemy_hero else None
         enemy_near = False
         if enemy_pos is not None:
             dist_enemy = self._distance(hero_pos, enemy_pos)
+            # 条件4：敌方英雄应该远离自己，否则不安全，不适合推塔
             enemy_near = dist_enemy is not None and dist_enemy <= self.ENEMY_HERO_SAFE_RADIUS
+        # 条件5：射程内没有敌方小兵，否则应该先清理兵线而非推塔
         enemy_minion_in_range = self._has_enemy_minion_in_range(npc_states, hero_pos, attack_range)
 
+        # 如果条件3~5不满足的话，则不安全
         unsafe = (not has_minion_support) or enemy_near or enemy_minion_in_range
         if unsafe:
+            # 不安全的时候如果在敌方防御塔范围内，则应该撤退
             if dist_tower <= self.TOWER_PROTECT_RADIUS + self.RETREAT_BUFFER:
                 return self._build_retreat_action(current_action, hero_pos, tower_pos)
             return None
 
+        # 安全的情况下，如果敌方防御塔在射程内，则攻击防御塔
         if dist_tower <= attack_range:
             attack_action = current_action.copy()
             attack_action[0] = 3
             attack_action[5] = 7
             return attack_action
 
+        # 如果还打不到防御塔，则前进
         move_x, move_z = self._encode_direction(hero_pos, tower_pos)
         return self._build_move_action(current_action, move_x, move_z)
 
