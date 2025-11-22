@@ -229,12 +229,14 @@ class Agent(BaseAgent):
     ################################################################
     # 数据处理方法 - 可以修改，根据需求自定义数据处理逻辑
     ################################################################
-    MOVE_BUTTON_INDEX = 1
+    MOVE_BUTTON_INDEX = 2
     MOVE_GRID_SIZE = 16
     MOVE_CENTER_INDEX = MOVE_GRID_SIZE // 2
     TOWER_PROTECT_RADIUS = 8800
-    ENEMY_HERO_SAFE_RADIUS = 8000
+    ENEMY_HERO_SAFE_RADIUS = 12000
     DESIRED_TOWER_RANGE = 8000
+    MAX_RULE_TRIGGER_RANGE = 15000
+    MIN_MINION_COUNT = 2
 
     #NOTE: 可以修改，将ActData转换为环境可用的动作格式，可以添加规则后处理
     def action_process(self, observation, act_data, is_stochastic):
@@ -299,6 +301,7 @@ class Agent(BaseAgent):
     #NOTE: 不用改，每局游戏开始时重置agent状态
     def reset(self, hero_camp, player_id):
         self.hero_camp = hero_camp
+        self.hero_camp_str = f"PLAYERCAMP_{hero_camp}"
         self.player_id = player_id
         self.lstm_hidden = np.zeros([self.lstm_unit_size])
         self.lstm_cell = np.zeros([self.lstm_unit_size])
@@ -318,6 +321,8 @@ class Agent(BaseAgent):
         if observation is None or len(current_action) < 6:
             return None
 
+        self.hero_camp_str = "PLAYERCAMP_" + str(self.hero_camp)
+
         frame_state = observation.get("frame_state") or {}
         hero_states = frame_state.get("hero_states") or []
         npc_states = frame_state.get("npc_states") or []
@@ -328,7 +333,7 @@ class Agent(BaseAgent):
             actor_state = hero.get("actor_state") or {}
             if hero.get("player_id") == self.player_id:
                 main_hero = hero
-            elif actor_state.get("camp") != self.hero_camp:
+            elif actor_state.get("camp") != self.hero_camp_str:
                 enemy_hero = hero
 
         if main_hero is None:
@@ -336,7 +341,7 @@ class Agent(BaseAgent):
 
         enemy_tower = None
         for npc in npc_states:
-            if npc.get("sub_type") == "ACTOR_SUB_TOWER" and npc.get("camp") != self.hero_camp:
+            if npc.get("sub_type") == "ACTOR_SUB_TOWER" and npc.get("camp") != self.hero_camp_str:
                 enemy_tower = npc
                 break
 
@@ -366,14 +371,20 @@ class Agent(BaseAgent):
         override_action[0] = self.MOVE_BUTTON_INDEX
         override_action[1] = move_x
         override_action[2] = move_z
-        override_action[3] = self.MOVE_CENTER_INDEX
-        override_action[4] = self.MOVE_CENTER_INDEX
+        override_action[3] = 4
+        override_action[4] = 2
         override_action[5] = 0
+        # print("hero_pos: ", hero_pos)
+        # print("tower_pos: ", tower_pos)
+        # print("move_x: ", move_x)
+        # print("move_z: ", move_z)
+        # with open("override_action.txt", "a") as f:
+        #     f.write(f"hero_pos: {hero_pos}, tower_pos: {tower_pos}, move_x: {move_x}, move_z: {move_z}\n")
         return override_action
 
     def _has_ally_minion_near_tower(self, npc_states, tower_pos):
         for npc in npc_states:
-            if npc.get("camp") != self.hero_camp or npc.get("sub_type") != "ACTOR_SUB_SOLDIER":
+            if npc.get("camp") != self.hero_camp_str or npc.get("sub_type") != "ACTOR_SUB_SOLDIER":
                 continue
             minion_pos = self._extract_position(npc)
             if minion_pos is None:
@@ -403,8 +414,8 @@ class Agent(BaseAgent):
         return math.hypot(pos_a[0] - pos_b[0], pos_a[1] - pos_b[1])
 
     def _encode_direction(self, origin, target):
-        dx = target[0] - origin[0]
-        dz = target[1] - origin[1]
+        dx = target[0] - origin[0] if self.hero_camp == 1 else origin[0] - target[0]
+        dz = target[1] - origin[1] if self.hero_camp == 1 else origin[1] - target[1]
         norm = math.hypot(dx, dz)
         if norm < 1e-5:
             return self.MOVE_CENTER_INDEX, self.MOVE_CENTER_INDEX
