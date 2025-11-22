@@ -233,7 +233,7 @@ class Agent(BaseAgent):
     MOVE_GRID_SIZE = 16
     MOVE_CENTER_INDEX = MOVE_GRID_SIZE // 2
     TOWER_PROTECT_RADIUS = 8800
-    ENEMY_HERO_SAFE_RADIUS = 12000
+    ENEMY_HERO_SAFE_RADIUS = 15000
     DESIRED_TOWER_RANGE = 8000
     MAX_RULE_TRIGGER_RANGE = 15000
     MIN_MINION_COUNT = 2
@@ -321,8 +321,6 @@ class Agent(BaseAgent):
         if observation is None or len(current_action) < 6:
             return None
 
-        self.hero_camp_str = "PLAYERCAMP_" + str(self.hero_camp)
-
         frame_state = observation.get("frame_state") or {}
         hero_states = frame_state.get("hero_states") or []
         npc_states = frame_state.get("npc_states") or []
@@ -353,6 +351,10 @@ class Agent(BaseAgent):
         if tower_pos is None or hero_pos is None:
             return None
 
+        dist_tower = self._distance(hero_pos, tower_pos)
+        if dist_tower is None or dist_tower > self.MAX_RULE_TRIGGER_RANGE:
+            return None
+
         if not self._has_ally_minion_near_tower(npc_states, tower_pos):
             return None
 
@@ -362,8 +364,7 @@ class Agent(BaseAgent):
             if dist_enemy is not None and dist_enemy <= self.ENEMY_HERO_SAFE_RADIUS:
                 return None
 
-        dist_tower = self._distance(hero_pos, tower_pos)
-        if dist_tower is None or dist_tower <= self.DESIRED_TOWER_RANGE:
+        if dist_tower <= self.DESIRED_TOWER_RANGE:
             return None
 
         move_x, move_z = self._encode_direction(hero_pos, tower_pos)
@@ -383,6 +384,7 @@ class Agent(BaseAgent):
         return override_action
 
     def _has_ally_minion_near_tower(self, npc_states, tower_pos):
+        minion_cnt = 0
         for npc in npc_states:
             if npc.get("camp") != self.hero_camp_str or npc.get("sub_type") != "ACTOR_SUB_SOLDIER":
                 continue
@@ -391,7 +393,9 @@ class Agent(BaseAgent):
                 continue
             dist = self._distance(minion_pos, tower_pos)
             if dist is not None and dist <= self.TOWER_PROTECT_RADIUS:
-                return True
+                minion_cnt += 1
+                if minion_cnt >= self.MIN_MINION_COUNT:
+                    return True
         return False
 
     def _extract_position(self, entity, is_hero=False):
