@@ -102,12 +102,6 @@ class Config:
     ]
 
     CLIP_PARAM = 0.2
-    
-    # Dual-Clip PPO parameter: when advantage < 0, clip ratio to prevent excessive policy updates
-    # Dual-Clip PPO参数：当advantage < 0时，裁剪ratio以防止策略过度更新
-    # Set to None or 0 to disable dual-clip (use standard PPO)
-    # 设置为None或0以禁用dual-clip（使用标准PPO）
-    DUAL_CLIP_PARAM = 3.0
 
     MIN_POLICY = 0.00001
 
