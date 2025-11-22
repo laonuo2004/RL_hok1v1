@@ -41,7 +41,6 @@ class Model(nn.Module):
         self.is_reinforce_task_list = Config.IS_REINFORCE_TASK_LIST
         self.min_policy = Config.MIN_POLICY
         self.clip_param = Config.CLIP_PARAM
-        self.dual_clip_param = Config.DUAL_CLIP_PARAM if hasattr(Config, 'DUAL_CLIP_PARAM') and Config.DUAL_CLIP_PARAM is not None else None
         self.restore_list = []
         self.var_beta = self.m_var_beta
         self.learning_rate = self.m_learning_rate
@@ -517,37 +516,9 @@ class Model(nn.Module):
 
                 surr1 = clip_ratio * advantage
                 surr2 = ratio.clamp(1.0 - self.clip_param, 1.0 + self.clip_param) * advantage
-                
-                # Dual-Clip PPO: when advantage < 0, apply additional lower bound clipping
-                # Dual-Clip PPO：当advantage < 0时，应用额外的下界裁剪以防止策略过度更新
-                if self.dual_clip_param is not None and self.dual_clip_param > 0:
-                    # When advantage >= 0: use standard PPO clip (min of surr1 and surr2)
-                    # 当advantage >= 0时：使用标准PPO裁剪（surr1和surr2的最小值）
-                    # When advantage < 0: apply dual-clip to prevent excessive updates
-                    # 当advantage < 0时：应用dual-clip以防止过度更新
-                    # Clip ratio to [1-eps, 1/c] when advantage < 0, where c is dual_clip_param
-                    # 当advantage < 0时，将ratio裁剪到[1-eps, 1/c]，其中c是dual_clip_param
-                    surr3_negative = ratio.clamp(1.0 - self.clip_param, 1.0 / self.dual_clip_param) * advantage
-                    
-                    # For negative advantage: use max (more conservative, smaller absolute value)
-                    # 对于负advantage：使用max（更保守，绝对值更小）
-                    # For positive advantage: use min (standard PPO)
-                    # 对于正advantage：使用min（标准PPO）
-                    surr_combined = torch.where(
-                        advantage < 0,
-                        torch.maximum(surr1, surr3_negative),  # More conservative for negative advantage
-                        torch.minimum(surr1, surr2)  # Standard PPO for positive advantage
-                    )
-                    
-                    temp_policy_loss = -torch.sum(
-                        surr_combined * (weight_list[task_index].float()) * 1
-                    ) / torch.maximum(torch.sum((weight_list[task_index].float()) * 1), torch.tensor(1.0))
-                else:
-                    # Standard PPO (no dual-clip)
-                    # 标准PPO（无dual-clip）
-                    temp_policy_loss = -torch.sum(
-                        torch.minimum(surr1, surr2) * (weight_list[task_index].float()) * 1
-                    ) / torch.maximum(torch.sum((weight_list[task_index].float()) * 1), torch.tensor(1.0))
+                temp_policy_loss = -torch.sum(
+                    torch.minimum(surr1, surr2) * (weight_list[task_index].float()) * 1
+                ) / torch.maximum(torch.sum((weight_list[task_index].float()) * 1), torch.tensor(1.0))
 
                 self.policy_cost = self.policy_cost + temp_policy_loss
 
