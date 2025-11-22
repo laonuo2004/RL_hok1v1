@@ -237,6 +237,7 @@ class Agent(BaseAgent):
     DEFAULT_ATTACK_RANGE = 8000
     MAX_RULE_TRIGGER_RANGE = 15000
     DEFAULT_MINION_COUNT = 2
+    RETREAT_BUFFER = 500
 
     #NOTE: 可以修改，将ActData转换为环境可用的动作格式，可以添加规则后处理
     def action_process(self, observation, act_data, is_stochastic):
@@ -351,26 +352,29 @@ class Agent(BaseAgent):
         if tower_pos is None or hero_pos is None:
             return None
 
-        dist_tower = self._distance(hero_pos, tower_pos)
-        if dist_tower is None or dist_tower > self.MAX_RULE_TRIGGER_RANGE:
-            return None
-
         actor_state = main_hero.get("actor_state") or {}
         attack_range = actor_state.get("attack_range")
         if attack_range is None or attack_range <= 0:
             attack_range = self.DEFAULT_ATTACK_RANGE
         required_minion_cnt = 0 if attack_range > self.TOWER_PROTECT_RADIUS else self.DEFAULT_MINION_COUNT
 
-        if not self._has_ally_minion_near_tower(npc_states, tower_pos, required_minion_cnt):
+        dist_tower = self._distance(hero_pos, tower_pos)
+        if dist_tower is None or dist_tower > self.MAX_RULE_TRIGGER_RANGE:
             return None
 
+        has_minion_support = self._has_ally_minion_near_tower(npc_states, tower_pos, required_minion_cnt)
+
         enemy_pos = self._extract_position(enemy_hero, is_hero=True) if enemy_hero else None
+        enemy_near = False
         if enemy_pos is not None:
             dist_enemy = self._distance(hero_pos, enemy_pos)
-            if dist_enemy is not None and dist_enemy <= self.ENEMY_HERO_SAFE_RADIUS:
-                return None
+            enemy_near = dist_enemy is not None and dist_enemy <= self.ENEMY_HERO_SAFE_RADIUS
+        enemy_minion_in_range = self._has_enemy_minion_in_range(npc_states, hero_pos, attack_range)
 
-        if self._has_enemy_minion_in_range(npc_states, hero_pos, attack_range):
+        unsafe = (not has_minion_support) or enemy_near or enemy_minion_in_range
+        if unsafe:
+            if dist_tower <= self.TOWER_PROTECT_RADIUS + self.RETREAT_BUFFER:
+                return self._build_retreat_action(current_action, hero_pos, tower_pos)
             return None
 
         if dist_tower <= attack_range:
@@ -380,14 +384,7 @@ class Agent(BaseAgent):
             return attack_action
 
         move_x, move_z = self._encode_direction(hero_pos, tower_pos)
-        override_action = current_action.copy()
-        override_action[0] = self.MOVE_BUTTON_INDEX
-        override_action[1] = move_x
-        override_action[2] = move_z
-        override_action[3] = 4
-        override_action[4] = 2
-        override_action[5] = 0
-        return override_action
+        return self._build_move_action(current_action, move_x, move_z)
 
     def _has_ally_minion_near_tower(self, npc_states, tower_pos, required_cnt):
         if required_cnt <= 0:
@@ -419,6 +416,22 @@ class Agent(BaseAgent):
             if dist is not None and dist <= attack_range:
                 return True
         return False
+
+    def _build_move_action(self, base_action, move_x, move_z):
+        move_action = base_action.copy()
+        move_action[0] = self.MOVE_BUTTON_INDEX
+        move_action[1] = move_x
+        move_action[2] = move_z
+        move_action[3] = 4
+        move_action[4] = 2
+        move_action[5] = 0
+        return move_action
+
+    def _build_retreat_action(self, base_action, hero_pos, tower_pos):
+        move_x, move_z = self._encode_direction(hero_pos, tower_pos)
+        retreat_x = self.MOVE_GRID_SIZE - 1 - move_x
+        retreat_z = self.MOVE_GRID_SIZE - 1 - move_z
+        return self._build_move_action(base_action, retreat_x, retreat_z)
 
     def _extract_position(self, entity, is_hero=False):
         if entity is None:
