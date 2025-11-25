@@ -1,0 +1,91 @@
+[learner]
+app_configure_file = "conf/configure_app.toml"
+# learner上传COS文件的频率
+model_file_save_per_minutes = 1
+svr_index = 0
+svr_ports = 9099
+display_every = 10
+svr_name = "learner"
+# modelpool地址
+modelpool_remote_addrs = "127.0.0.1:10014"
+ip_address = "0.0.0.0"
+rainbow_group = "learner"
+replay_buffer_reset = true
+reverb_num_workers_per_iterator = 4
+reverb_rate_limiter = "MinSize"
+reverb_samples_per_insert = 9999
+reverb_error_buffer = 1000
+reverb_chunk_length = 1
+reverb_max_timesteps = 1
+reverb_max_in_flight_items = ""
+reverb_data_cache = false
+reverb_num_samples = 1
+reverb_validation_timeout_ms = 1000
+batch_process_for_batch_manager = 2
+input_dim = [4]
+action_dim = 9
+init_learning_rate = 2.5e-4
+init_clip_param = 0.1
+epsilon = 1e-5
+max_step = 20000000
+alpha = 0.5
+beta = 0.01
+data_split_shape = [4, 9, 1, 1, 1, 1]
+weight_decay = {ecay=0e-4, exclude=["batch_norm", "bias"]}
+rnn_time_steps = 4
+rnn_states = ["lstm_cell", "lstm_hidden"]
+# learner支持旁路操作
+use_bypass = false
+bypass_per_minutes = 10
+bypass_dir = "/data/bypass"
+# C++常驻进程配置文件
+cpp_learner_configure = "/data/projects/kaiwu-fwk/kaiwudrl/server/cpp/conf/learner_server.toml"
+# 是否启动learner_server, 临时方案, 支持aisrv和learner之间采用zmq通信才能开启
+use_learner_server = false
+learner_send_sample_server_count = 2
+# 下面是算法侧配置
+enable_mixed_precision = true
+max_grad_norm = 5
+decay_steps = 100000
+decay_rate = 0.9
+ppo_end_clip_range = 0.1
+end_lr = 1e-4
+ppo_epsilon = 1e-5
+ppo_pg_coef = 1
+ppo_ent_coef = 0.01
+ppo_vf_coef = 0.5
+sparse_as_dense = true
+grad_to_fp16 = false
+use_grad_clip = true
+grad_clip_range = 0.5
+use_fusion = true
+use_xla_fusion = true
+piecewise_fusion_schedule = "28;40"
+use_fp16 = true
+use_xla = true
+check_values = false
+use_jit = false
+use_mix_precision = false
+channels_last = false
+has_unused_params = false
+use_compile = false
+# 下面是learner支持timeline相关配置
+print_timeline = false
+local_step_count_when_print_timeline = "100,101,102"
+save_model_steps = 1000
+
+dump_profile = false
+
+# 下面是replay buffer的相关配置
+replay_buffer_capacity = 10000
+preload_ratio = 2
+
+# learner上reverb样本的输入维度, 注意不同的算法维度不一样, 比如dqn的维度是21642, ppo的维度是10823
+sample_dim = 21642
+
+# learner执行while True循环的进行训练
+learner_train_by_while_true = false
+learner_train_sleep_seconds = 0.001
+
+# pytorch读取reverb采取的数据方案
+pytorch_read_data_from_reverb_type = 1

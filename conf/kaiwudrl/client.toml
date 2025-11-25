@@ -1,0 +1,15 @@
+[client]
+app_configure_file = "conf/configure_app.toml"
+gym_terminal_threshold = 160
+gym_client_num = 1
+soccer_terminal_threshold =  0.5
+soccer_client_num =  1
+window_size =  100
+random =  true
+gym_env_name = "CartPole-v1"
+svr_name = "client"
+rainbow_group = "client"
+# IP
+aisvr_ip = "127.0.0.1"
+# 端口
+aisvr_port = "8000"

@@ -1,0 +1,316 @@
+[main]
+# 下面的项目是每个app要单独配置的
+app = "app"
+self_play = false
+set_name = "set1"
+self_play_set_name = "set2"
+selfplay_app_conf = "selfplay_app_conf"
+noselfplay_app_conf = "noselfplay_app_conf"
+algo_conf = "algo_conf"
+
+# learner训练批处理大小限制
+train_batch_size = 256
+# 样本消耗/生成采样比
+production_consume_ratio = 10
+
+# 采用的算法
+algo = "algo"
+
+# reverb移除策略, 可选项是reverb.selectors.Lifo, reverb.selectors.Prioritized, reverb.selectors.Fifo
+reverb_remover = "reverb.selectors.Fifo"
+# reverb采样策略, 可选项是reverb.selectors.Prioritized, reverb.selectors.Fifo, reverb.selectors.Uniform
+reverb_sampler = "reverb.selectors.Uniform"
+
+# 下面的是公共配置, 按需修改
+run_mode = "train"
+# 下面是日志文件相关配置
+log_dir = "/data/projects/hok1v1/log"
+level = "INFO"
+tensorflow_log_level = "INFO"
+max_calls_log_per_min = 60
+max_single_message_len = 2048
+# 由于存在多个进程打印日志可能引起日志比较多, 增加预留的进程启动顺序号, 便于控制,
+# 比如在workflow所在的进程启动时index为0的打印日志
+process_start_index_allowed_print_log_list = [0]
+
+# 评估模式模型文件夹路径和ID
+eval_model_dir = "/data/ckpt/gorge_walk_dqn/"
+eval_model_id = 1000
+
+# self-play模式下对端的模型文件路径和ID
+self_play_eval_model_dir = "/data/ckpt/gorge_walk_dqn_self_play"
+self_play_eval_model_id = 1000
+
+# 预加载模型文件夹路径和ID
+preload_model = false
+preload_model_dir = "/data/ckpt/back_to_the_realm_dqn/"
+preload_model_id = 1000
+
+# learner/actor之间同步model文件的时间间隔, 建议是偶数倍
+model_file_sync_per_minutes = 2
+
+# actor加载model文件的时间间隔, 建议是奇数倍
+model_file_load_per_minutes = 3
+
+# torch使用时默认的线程数目, 针对限制torch的CPU使用很重要
+torch_num_threads = 1
+
+# 使用的强化学习框架, 包括tensorflow_simple, tensorflow_complex, tensorrt, pytorch等, 默认是tensorflow_simple
+use_which_deep_learning_framework = "tensorflow_simple"
+
+# 训练时采用on-policy, off-policy
+algorithm_on_policy_or_off_policy = "off-policy"
+# 如果是on-policy, 支持的类型step(aisrv角度每帧), episode(aisrv角度每局), time_interval(learner角度多帧)
+on_policy_by_way = "step"
+# 如果是on-policy, 最大的超时时间间隔, 建议设置小些多次少量
+on_policy_timeout_seconds = 5
+# 如果是on-policy, 设置达到多少比例即开始执行, 主要是站在aisrv主进程的角度看aisrvhandler进程, 站在learner的角度看aisrv进程, 默认为1, 按照需要设置
+on_policy_quantity_ratio = 1
+# on-policy情况下, learner需要有预测进程才能进行on-policy流程, 由于预测进程可能会重启或者其他异常, 需要周期性获取, 下面该值会*prometheus_stat_per_minutes即间隔时间
+on_policy_learner_get_actor_address_periodic_count = 5
+
+# aisrv发送请求到learner停止退出的比例, 异常情况下只要有1个即退出, 正常情况下按照比例退出, 默认是100%
+aisrv_process_stop_quantity_ratio = 1
+
+# aisrv发送请求到learner后可能存在小概率的事件导致需要超时退出, 这个值谨慎配置, 最差的就是按照事务时间超时退出
+aisrv_process_stop_timeout_seconds = 1800
+
+# 单个aisrv连接多少个kaiwu_env地址, 因为aisrv/learner进程也可能需要
+aisrv_connect_to_kaiwu_env_count = 1
+# 默认的aisrv地址, 如果是单容器里默认是127.0.0.1, 多个容器里用户按照需要设置, 逗号分割, 主要用于不使用alloc场景
+aisrv_default_address = "127.0.0.1:8000,"
+
+# 如果采用特征值处理的库是其他的插件, 则需要配置下, 否则忽略该配置项
+feature_process_lib_interface_configure = "environment/feature_process/config.dat"
+
+rainbow_env_name = "rainbow_env_name"
+cpp_daemon_send_recv_zmq_data = false
+# 下面是日志文件相关配置
+rotation = "1MB"
+encoding = "utf-8"
+compression = "zip"
+retention = 1
+# 日志按照json格式输出
+serialize = false
+# 如果输出了ERROR及其以上级别, 是否停掉进程
+stop_process_when_error = false
+# 下面是进程网络相关配置
+sock_buff_size = 31457280
+socket_timeout = 5
+backlog_size = 1024
+socket_retry_times = 100
+tcp_keep_alive = 1
+tcp_keep_alive_idle = 60
+tcp_keep_alive_intvl = 1
+tcp_keep_alive_cnt = 3
+tcp_immediate = true
+time_steps = 4
+policy_name = "train_one"
+# aisrv和actor通信方式, 支持zmq, zmq-ops
+aisrv_actor_communication_way = "zmq"
+# 下面是进程端口默认配置, 支持业务自定义端口
+aisrv_server_port = 8000
+reverb_svr_port = 9999
+zmq_server_port = 8888
+zmq_server_op_port = 6666
+client_svr_port = 5555
+kaiwu_env_svr_port = 5566
+# 下面是zmq配置
+zmq_ops_sendhwm = 30720
+zmq_ops_recvhwm = 30720
+# 在繁忙的程度上, server端需要多开IO线程
+zmq_io_threads_client = 1
+zmq_io_threads_server = 2
+queue_size = 1024
+# 队列超时等待时间
+queue_wait_timeout = 1
+proxy_batch_size = 32
+# 下面是learner的checkpoint文件配置
+restore_dir = "/data/ckpt"
+sigterm_pids_file = "/data/projects/sigterm_pids"
+summary_dir = "/data/summary"
+ckpt_dir = "/data/ckpt"
+user_ckpt_dir = "/data/user_ckpt_dir"
+model_pools_dir = "/data/model_pool"
+max_to_keep_ckpt_file_num = 50
+save_model_num = 1
+pb_model_dir = "/data/pb_model"
+save_pb_num = 1
+save_summaries_steps = 10
+save_checkpoint_steps = 100
+save_checkpoint_secs = 120
+save_summaries_secs = 600
+cpu_num = 4
+learner_ip_addrs = "localhost,localhost"
+actor_ip_addrs = "localhost,localhost"
+learner_grpc_ports = "8001"
+actor_grpc_ports = "8002"
+learner_device_type = "CPU"
+use_rnn = false
+# learner上reverb相关配置
+reverb_table_name = "reverb_replay_buffer_table"
+reverb_table_size = 1
+# TensorRT引擎文件目录
+tensorrt_engine_dir = "/data/projects/hok1v1/kaiwudrl/server/cpp/dist/actor/V100"
+# cpu亲和性
+actor_cpu_affinity_list = "0,1,2,3,4,5,6,7,8,9"
+# aisrv最大接收到的TCP连接数目
+max_tcp_count = 1000
+# 间隔多少帧就进行预测
+frame_interval = 3
+# actor/learner的同步modelpool时间间隔
+use_ckpt_sync = true
+ckpt_sync_way = "modelpool"
+modelpool_max_save_model_count = 50
+print_profile = false
+print_profile_start_step = 100
+print_profile_end_step = 200
+# 进程空闲次数和休息时间
+idle_sleep_second = 0.001
+idle_sleep_count = 5
+# 下面是分配服务alloc的配置
+use_alloc = false
+alloc_process_address = "alloc_process_address"
+alloc_process_per_seconds = 15
+alloc_process_role_client = 1
+alloc_process_role_aisrv = 2
+alloc_process_role_actor = 3
+alloc_process_role_learner = 4
+alloc_process_role_kaiwu_env = 7
+alloc_process_assign_limit_aisrv = 10000
+alloc_process_assign_limit_actor = 10000
+alloc_process_assign_limit_learner = 10000
+alloc_process_assign_limit_client = 10000
+alloc_process_assign_limit_kaiwu_env = 10000
+# actor、learner进程启动方式, 0代表正常启动, 1代表从COS拉取model文件后启动
+start_actor_learner_process_type = 0
+# 下面是COS的配置, 安全监管的需求, cos_secret_id和cos_secret_key不再git代码里标注, 腾讯内部采用七彩石管理, 其他环境使用者确保安全问题
+push_to_cos = false
+cos_local_target_dir = "/data/cos_local_target_dir"
+cos_local_keep_file_num = 10
+cos_secret_id = "cos_secret_id"
+cos_secret_key = "cos_secret_key"
+cos_bucket = "dataservice-use-1252931805"
+cos_region = "ap-nanjing"
+cos_token = "cos_token"
+# 是否在容器上生成model的压缩文件
+need_to_sync = true
+# 下面是普罗米修斯的配置
+use_prometheus = false
+check_prometheus_way_availability = true
+check_prometheus_way_availability_per_seconds = 600
+use_prometheus_way = "push"
+prometheus_pwd = "prometheus_pwd"
+prometheus_user = "prometheus_user"
+prometheus_pushgateway = "prometheus_pushgateway"
+prometheus_stat_per_minutes = 1
+prometheus_instance = "kaiwu-drl"
+prometheus_db = "kaiwu-drl"
+prometheus_server_port = 6000
+max_report_monitor_count_per_minutes = 1000
+# 下面是七彩石配置, 每个项目单独配置rainbow_env_name
+use_rainbow = false
+rainbow_url = "api.rainbow.oa.com:8080"
+rainbow_app_id = "02e8fe72-db77-4007-bc38-5d383b9e2b66"
+rainbow_user_id = "rainbow_user_id"
+rainbow_secret_key = "rainbow_secret_key"
+rainbow_activate_per_minutes = 10
+# 下面是压缩和解压缩配置
+use_compress_decompress = true
+compress_decompress_algorithms = "lz4"
+lz4_uncompressed_size = 3145728
+lz4_learner_uncompressed_size = 314572800
+# 下面是Redis配置
+redis_host = "redis_host"
+redis_port = 6379
+aisrv_actor_timeout_second_threshold = 1
+# 是否支持actor/learner扩缩容
+actor_learner_expansion = false
+# aisrv和actor之间通信信息, pickle和protobuf, actor是C++常驻进程时选择protobuf, 默认是pickle, protobuf针对各个项目可能存在定制化
+aisrv_actor_protocol = "pickle"
+# task_id
+task_id = "uuid"
+# project_version, 指开悟平台上的版本号
+kaiwu_project_version = "1.1.1"
+# reverb client设置
+reverb_client_max_sequence_length = 1
+reverb_client_chunk_length = 1
+# 启动C++ Daemon进程后多久启动python Daemon, 规避共享内存冲突问题
+start_python_daemon_sleep_after_cpp_daemon_sec = 1
+# 下面是算法里的配置, 更加详细的算法配置, 请参见:app/{业务}/common/configs/config.py
+learning_rate = 1e-4
+var_beta = 0.025
+ppo_clip_range = 0.2
+
+# battlesrv 针对gamecore和aisrv返回响应包的最大时间间隔, 超过了即当前battlesrv进程退出, 这个值需要根据实际情况配置, 特别是on-policy流程下推荐实地验证后再配置
+battlesrv_recv_response_from_gamecore_aisrv_seconds = 60
+
+# 打印特征值数据到文件
+print_predict_data = false
+print_predict_data_dir = "/data/summary"
+
+# on-policy时单次重试的最大次数, 比如actor/learner同步model文件, learner等待aisrv心跳请求返回等, 其中on_policy_error_max_retry_rounds是最大轮数, 每轮里等待时间为on_policy_error_retry_count * idle_sleep_second
+on_policy_error_retry_count = 10000
+on_policy_error_max_retry_rounds = 3
+# on-policy时单次重试的最大次数, 减少对modelpool压力, 故和on_policy_error_retry_count单独设置参数
+on_policy_error_retry_count_when_modelpool = 10
+# 链路跟踪功能, 查看单个message_id从aisrv-->actor-->aisrv环节的耗时
+distributed_tracing = false
+# actor_proxy, actor_server使用进程的方式, 包括direct直接调用, coroutine协程, thread线程, gevent并行
+server_use_processes = "direct"
+# 预测是放在actor远程还是aisrv本地, 小规模场景建议是aisrv本地local模式, 大规模场景和小规模场景都可以使用的actor远程remote模式
+predict_local_or_remote = "remote"
+# 当predict_local_or_remote设置为local时, 预测是放在哪个进程里面的, 可能的选择包括aisrv进程, actor_proxy_local进程
+process_for_prediction = "actor_proxy_local"
+# actor上批量处理的batch_size大小, 很重要
+predict_batch_size = 32
+# actor上收预测请求的批处理耗时阈值, 很重要
+actor_receive_cost_time_ms = 1
+# 框架接入模式, 标准化模式standard和普通模式normal对框架代码不一样, 在标准化模式成熟之前, 请采用普通模式, 待成熟后, 开始使用标准化模式
+framework_integration_patterns = "normal"
+# 采用的wrapper形式, 包括remote, local, none
+wrapper_type = "remote"
+# 用户保存模型最大次数, 设置为小于等于0代表不限制
+user_save_mode_max_count = 400
+# 用户保存模型的频率, 设置为小于等于0代表不限制
+user_save_model_max_frequency_per_min = 2
+# 在模型文件保存时, 需要保存的文件目录, 多个目录请按照逗号分割, 并且是以项目根目录开始看的
+copy_dir = "conf,"
+# 标准化模式下拷贝到目标文件夹用于COS上传的目录, 和开悟平台对齐
+standard_upload_file_dir = "/workspace/train/backup_model/"
+# learner之间的梯度同步方法, horovod或者ddp, 其中tensorflow时配置horovod, pytorch时配置horovod或者ddp
+distributed_backend = "horovod"
+# pytorch训练间隔多少步输出model文件
+dump_model_freq = 1000
+# pytorch训练时框架最大保存model文件数量, 采用FIFO模式
+max_save_model_file_count = 100
+# 用户在训练开始时上传的model文件, 主要是用于在训练过程中去加载, 逗号分割, 超过init_model_file_list_max限制的不做处理
+init_model_file_list = ""
+# 用户在训练时上传的model文件ID列表, 逗号分割
+init_model_file_id_list=""
+init_model_file_list_max = 3
+# 在多个aisrv请求同一个actor/learner执行load_model/save_model操作时, 如果某个aisrv异常后重新进行选择新的aisrv的最大时间, 本身属于小概率事件
+choose_aisrv_to_load_model_or_save_model_max_time_seconds = 1800
+# 进行数字签名设置的值
+public_exponent = 65537
+key_size = 2048
+# 业务, 分比赛competition, 教学teaching等, 默认是比赛
+business = "competition"
+user_id = 1
+team_id = 2
+digital_signature_verification = false
+private_key_content = ""
+public_key_content = ""
+# 因为aisrv和learner都需要知道当前使用的是哪种类型的, 故提取到这里
+replay_buffer_type = "reverb"
+# 处理容器退出信号后的休息时间
+handle_sigterm_sleep_seconds = 99
+# 采用的预测和训练的CPU, GPU, NPU
+actor_device_type = "CPU"
+aisrv_device_type = "CPU"
+# 确认是在什么部署场景下运行, 比如单机, 客户端, 集群等
+deployment_platforms = "cluster"
+# 随机种子, 主要是评测时需要
+random_seed = 1
+# 在aisrv处针对多个agent的处理方式是串行Sequential, 并行parallel还是其他, 默认是串行
+multi_agent_predict = "sequential"

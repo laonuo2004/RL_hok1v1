@@ -1,0 +1,12 @@
+[hok1v1]
+run_handler = "environment.sgame_run_handler.NatureRunHandler"
+rl_helper = "kaiwudrl.server.aisrv.kaiwu_rl_helper_standard.KaiWuRLStandardHelper"
+probs_handler = "tools.action_space_1v1.DumpProbs"
+
+[hok1v1.policies.train_one]
+policy_builder = "kaiwudrl.server.aisrv.async_policy.AsyncBuilder"
+algo = "ppo"
+
+[hok1v1.policies.train_two]
+policy_builder = "kaiwudrl.server.aisrv.async_policy.AsyncBuilder"
+algo = "ppo"

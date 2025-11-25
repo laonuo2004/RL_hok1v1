@@ -1,0 +1,34 @@
+[actor]
+app_configure_file = "conf/configure_app.toml"
+svr_name = "actor"
+svr_index = 0
+svr_ports = 8088
+# 如果aisrv与actor之间的通信是zmq-ops方式, 数据读取相关配置
+predict_input_queue_size = 1024
+predict_input_threads = 2
+predict_input_queue_deq_min = 1
+modelpool_remote_addrs = "127.0.0.1:10014"
+ip_address = "0.0.0.0"
+# actor上采用TensorRT时, python和c++进程共享内存的进程数目
+actor_cpu_2gpu_thread_num = 3
+# actor上采用TesnorRT时, 异步流水线的预测进程/线程数目
+actor_pipeline_predict_thread_num = 4
+# 是否是对战模式下的actor
+self_play_actor = false
+# use pipeline必须要在TensorRT模式下
+use_pipeline_predict = false
+# 流水线模式采用同步或者异步, true表示采用流水线方式, false表示不采用流水线方式
+pipeline_process_sync = false
+# actor_server进行收发包时采用不同的进程, false表示网络收发是同一个进程, true表示网络收发是不同进程
+actor_server_async = false
+# actor上predict进程个数, 便于predict进程并行
+actor_predict_process_num = 1
+# 是否是python和C++各自都是常驻进程方式
+python_cpp_daemon = false
+rainbow_group = "actor"
+# C++常驻进程配置文件
+cpp_actor_configure = "/data/projects/kaiwu-fwk/kaiwudrl/server/cpp/conf/actor_server.toml"
+# actor_server和predictor之间是否采用相同的queue还是不同的queue, 如果是相同的queue, 则actor_server只有1个queue; 如果是不同的queue, 则各个predict进程维护queue
+actor_server_predict_server_different_queue = false
+# 是否保存预测数据
+save_predict_data = true
