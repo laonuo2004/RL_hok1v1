@@ -74,6 +74,8 @@ class GameRewardManager:
         self.get_reward(frame_data, self.m_reward_value)
 
         frame_no = frame_data["frameNo"]
+        # print(f"frame_no = {frame_no}\n\n")
+        # print(f"time_scale_arg = {self.time_scale_arg}\n\n")
         if self.time_scale_arg > 0:
             for key in self.m_reward_value:
                 self.m_reward_value[key] *= math.pow(0.6, 1.0 * frame_no / self.time_scale_arg)
@@ -109,12 +111,12 @@ class GameRewardManager:
             if organ_camp == camp:
                 if organ_subtype == "ACTOR_SUB_TOWER":
                     main_tower = organ
-                elif organ_subtype == "ACTOR_SUB_CRYSTAL":
+                elif organ_subtype == "ACTOR_SUB_TOWER_SPRING":
                     main_spring = organ
             else:
                 if organ_subtype == "ACTOR_SUB_TOWER":
                     enemy_tower = organ
-                elif organ_subtype == "ACTOR_SUB_CRYSTAL":
+                elif organ_subtype == "ACTOR_SUB_TOWER_SPRING":
                     enemy_spring = organ
 
         for reward_name, reward_struct in cul_calc_frame_map.items():
@@ -145,7 +147,7 @@ class GameRewardManager:
             # Tower health points
             # 塔血量
             elif reward_name == "tower_hp_point":
-                reward_struct.cur_frame_value = 1.0 * main_tower["hp"] / main_tower["max_hp"]
+                reward_struct.cur_frame_value = math.sqrt(1.0 * main_tower["hp"] / main_tower["max_hp"])
             # Last hit
             # 补刀
             elif reward_name == "last_hit":
@@ -172,6 +174,10 @@ class GameRewardManager:
             # 前进
             elif reward_name == "forward":
                 reward_struct.cur_frame_value = self.calculate_forward(main_hero, main_tower, enemy_tower)
+            
+            elif reward_name == "backward" :
+                reward_struct.cur_frame_value = 0
+                # reward_struct.cur_frame_value = self.calculate_backward(main_hero, main_tower, main_spring)
 
     # Calculate the total amount of experience gained using agent level and current experience value
     # 用智能体等级和当前经验值，计算获得经验值的总量
@@ -197,6 +203,19 @@ class GameRewardManager:
         if main_hero["actor_state"]["hp"] / main_hero["actor_state"]["max_hp"] > 0.99 and dist_hero2emy > dist_main2emy:
             forward_value = (dist_main2emy - dist_hero2emy) / dist_main2emy
         return forward_value
+    
+    def calculate_backward(self, main_hero, main_tower, main_spring) :
+        hero_pos = (main_hero["actor_state"]["location"]["x"], main_hero["actor_state"]["location"]["z"])
+        spring_pos = (main_spring["location"]["x"], main_spring["location"]["z"])
+        tower_pos = (main_tower["location"]["x"], main_tower["location"]["z"])
+        dist_hero2spring = math.dist(hero_pos, spring_pos)
+        dist_tower2spring = math.dist(spring_pos, tower_pos)
+        backward_value = 0
+        # print(f"hero: {main_hero['actor_state']['camp']} tower: {main_tower['camp']} spring: {main_spring['camp']}")
+        # print(f"hero_to_spring: {dist_hero2spring}\ntower_to_spring: {dist_tower2spring}\n\n")
+        if main_hero["actor_state"]["hp"] / main_hero["actor_state"]["max_hp"] < 0.4 and dist_hero2spring < dist_tower2spring :
+            backward_value = (dist_tower2spring - dist_hero2spring) / dist_tower2spring
+        return backward_value
 
     # Calculate the reward item information for both sides using frame data
     # 用帧数据来计算两边的奖励子项信息
@@ -209,12 +228,77 @@ class GameRewardManager:
                 self.main_hero_camp = main_camp
             else:
                 enemy_camp = hero["actor_state"]["camp"]
+        # print(f"\n\n\n{main_camp}\n\n\n")
         self.set_cur_calc_frame_vec(self.m_main_calc_frame_map, frame_data, main_camp)
         self.set_cur_calc_frame_vec(self.m_enemy_calc_frame_map, frame_data, enemy_camp)
 
     # Use the values obtained in each frame to calculate the corresponding reward value
     # 用每一帧得到的奖励子项信息来计算对应的奖励值
+    def soldier_in_tower(self, frame_data):
+        main_tower, main_spring, enemy_tower, enemy_spring = None, None, None, None
+        npc_list = frame_data["npc_states"]
+        for organ in npc_list:
+            organ_camp = organ["camp"]
+            organ_subtype = organ["sub_type"]
+            if organ_camp == self.main_hero_camp:
+                if organ_subtype == "ACTOR_SUB_TOWER":
+                    main_tower = organ
+                elif organ_subtype == "ACTOR_SUB_CRYSTAL":
+                    main_spring = organ
+            else:
+                if organ_subtype == "ACTOR_SUB_TOWER":
+                    enemy_tower = organ
+                elif organ_subtype == "ACTOR_SUB_CRYSTAL":
+                    enemy_spring = organ
+        
+        enemy_tower_pos = (enemy_tower['location']['x'], enemy_tower['location']['z'])
+
+        for organ in npc_list:
+            organ_camp = organ["camp"]
+            organ_subtype = organ["sub_type"]
+            if organ_camp == self.main_hero_camp and organ_subtype == "ACTOR_SUB_SOLDIER":
+                pos = (organ['location']['x'], organ['location']['z'])
+                # print(f"\n\n\nsoldier pos: {pos} enemy_tower_pos: {enemy_tower_pos}\n\n\n")
+                if math.dist(enemy_tower_pos, pos) < 8000:
+                    return True
+        return False
+
+    def hero_in_tower(self, frame_data) :
+        main_tower, main_spring, enemy_tower, enemy_spring = None, None, None, None
+        npc_list = frame_data["npc_states"]
+        for organ in npc_list:
+            organ_camp = organ["camp"]
+            organ_subtype = organ["sub_type"]
+            if organ_camp == self.main_hero_camp:
+                if organ_subtype == "ACTOR_SUB_TOWER":
+                    main_tower = organ
+                elif organ_subtype == "ACTOR_SUB_CRYSTAL":
+                    main_spring = organ
+            else:
+                if organ_subtype == "ACTOR_SUB_TOWER":
+                    enemy_tower = organ
+                elif organ_subtype == "ACTOR_SUB_CRYSTAL":
+                    enemy_spring = organ
+        
+        main_hero, enemy_hero = None, None
+        hero_list = frame_data["hero_states"]
+        for hero in hero_list:
+            hero_camp = hero["actor_state"]["camp"]
+            if hero_camp == self.main_hero_camp:
+                main_hero = hero
+            else:
+                enemy_hero = hero
+        
+        hero_pos = (
+            main_hero["actor_state"]["location"]["x"],
+            main_hero["actor_state"]["location"]["z"],
+        )
+        enemy_tower_pos = (enemy_tower['location']['x'], enemy_tower['location']['z'])
+
+        return math.dist(hero_pos, enemy_tower_pos) < 8000
+
     def get_reward(self, frame_data, reward_dict):
+        # print(f"\n\n\n{frame_data}\n\n\n")
         reward_dict.clear()
         reward_sum, weight_sum = 0.0, 0.0
         for reward_name, reward_struct in self.m_cur_calc_frame_map.items():
@@ -241,6 +325,8 @@ class GameRewardManager:
                         - self.m_enemy_calc_frame_map[reward_name].last_frame_value
                     )
                 reward_struct.value = reward_struct.cur_frame_value - reward_struct.last_frame_value
+                if self.hero_in_tower(frame_data) :
+                    reward_struct.value *= 3
             elif reward_name == "ep_rate":
                 reward_struct.cur_frame_value = self.m_main_calc_frame_map[reward_name].cur_frame_value
                 reward_struct.last_frame_value = self.m_main_calc_frame_map[reward_name].last_frame_value
@@ -267,8 +353,22 @@ class GameRewardManager:
                     reward_struct.value = reward_struct.cur_frame_value - reward_struct.last_frame_value
             elif reward_name == "forward":
                 reward_struct.value = self.m_main_calc_frame_map[reward_name].cur_frame_value
+            elif reward_name == "backward":
+                reward_struct.value = self.m_main_calc_frame_map[reward_name].cur_frame_value
             elif reward_name == "last_hit":
                 reward_struct.value = self.m_main_calc_frame_map[reward_name].cur_frame_value
+            elif reward_name == "tower_hp_point" :
+                reward_struct.cur_frame_value = (
+                    self.m_main_calc_frame_map[reward_name].cur_frame_value
+                    - self.m_enemy_calc_frame_map[reward_name].cur_frame_value
+                )
+                reward_struct.last_frame_value = (
+                    self.m_main_calc_frame_map[reward_name].last_frame_value
+                    - self.m_enemy_calc_frame_map[reward_name].last_frame_value
+                )
+                reward_struct.value = reward_struct.cur_frame_value - reward_struct.last_frame_value
+                if self.soldier_in_tower(frame_data) :
+                    reward_struct.value += 3 * (self.m_enemy_calc_frame_map[reward_name].last_frame_value - self.m_enemy_calc_frame_map[reward_name].cur_frame_value)
             else:
                 # Calculate zero-sum reward
                 # 计算零和奖励
@@ -285,4 +385,7 @@ class GameRewardManager:
             weight_sum += reward_struct.weight
             reward_sum += reward_struct.value * reward_struct.weight
             reward_dict[reward_name] = reward_struct.value
+        
+        
+
         reward_dict["reward_sum"] = reward_sum

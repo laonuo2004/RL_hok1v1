@@ -14,10 +14,7 @@ import os
 import time
 from agent_ppo.conf.conf import Config
 
-################################################################
-# Algorithm 类 - 可以修改训练逻辑，这里是PPO算法的核心实现
-################################################################
-#NOTE: 可以修改算法逻辑（如更换优化器、调整梯度裁剪等）
+
 class Algorithm:
     def __init__(self, model, optimizer, scheduler, device=None, logger=None, monitor=None):
         self.device = device
@@ -37,7 +34,6 @@ class Algorithm:
 
         self.last_report_monitor_time = 0
 
-    #NOTE: 可以修改训练过程，这里实现了完整的训练步骤（前向传播→计算loss→反向传播→更新参数）
     def learn(self, list_sample_data):
         _input_datas = torch.stack([t.npdata for t in list_sample_data], dim=0)
         results = {}

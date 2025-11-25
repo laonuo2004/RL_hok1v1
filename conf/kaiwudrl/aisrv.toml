@@ -1,0 +1,53 @@
+[aisrv]
+svr_name = "aisrv"
+aisrv_framework = "socketserver"
+app_configure_file = "conf/configure_app.toml"
+max_queue_len = 1024
+mode = "async"
+ppo_gamma = 0.99
+ppo_lam = 0.95
+# reverb client设置
+reverb_client_max_sequence_length = 1
+reverb_client_chunk_length = 1
+# 录像回放设置
+replay_dump_path = "/data/replay_dump/"
+use_game_render = false
+modelpool_remote_addrs = "127.0.0.1:10014"
+# 这里要和app.json的设置对应上, 对战模式配置
+self_play_policy = "train_one"
+self_play_old_policy = "train_two"
+self_play_agent_index = 0
+self_play_old_agent_index = 1
+# 如果对战模式需要设置为0, 使用train_one和train_two; 如果训练模式有2个策略, 则设置为0或1都行, 使用train_one和train_two; 如果只有1个策略设置为1即可, 使用train_one
+self_play_new_ratio = 0
+# 下面是actor和learner地址相关配置
+# 单个aisrv连接多少个actor/learner地址
+aisrv_connect_to_actor_count = 3
+aisrv_connect_to_learner_count = 1
+# 下面是actor和learner地址相关配置
+actor_addrs = { train_one = ["127.0.0.1:8888"], train_two = ["127.0.0.1:8888"]}
+actor_proxy_num = 1
+self_play_actor_proxy_num = 1
+self_play_old_actor_proxy_num = 1
+learner_addrs = {train_one = ["127.0.0.1:9999"], train_two = ["127.0.0.1:9999"]}
+learner_proxy_num = 1
+self_play_learner_proxy_num = 1
+self_play_old_learner_proxy_num = 1
+aisrv_ip_address = "0.0.0.0"
+rainbow_group = "aisrv"
+sample_server_count = 1
+# 默认不用打开sample_server
+use_sample_server = false
+# C++常驻进程配置文件
+cpp_aisrv_configure = "/data/projects/kaiwu-fwk/kaiwudrl/server/cpp/conf/aisrv_server.ini"
+# 达到多少数量则发送样本
+send_sample_size = 10000
+# 默认的kaiwu_env地址, 如果是单容器里默认是127.0.0.1, 多个容器里用户按照需要设置, 逗号分割
+kaiwu_env_default_address = "127.0.0.1:5566,"
+get_kaiwu_env_by_alloc = true
+# 是否保存预测数据
+save_predict_data = false
+# 启动aisrv进程族时, 是否需要启动learner进程族
+need_to_start_learner = true
+# game_index主要在评估时可能使用上
+game_index = 0

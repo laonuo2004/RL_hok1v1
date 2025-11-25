@@ -24,10 +24,7 @@ from kaiwudrl.common.checkpoint.model_file_sync import ModelFileSync
 from tools.train_env_conf_validate import read_usr_conf, check_usr_conf
 from tools.metrics_utils import get_training_metrics
 
-################################################################
-# 训练工作流 - 平台入口函数，不能改函数签名
-################################################################
-#NOTE: 不能改函数签名 workflow(envs, agents, logger=None, monitor=None)，这是平台调用的入口
+
 @attached
 def workflow(envs, agents, logger=None, monitor=None):
     # Whether the agent is training, corresponding to do_predicts
@@ -67,11 +64,9 @@ def workflow(envs, agents, logger=None, monitor=None):
             if now - last_save_model_time > GameConfig.MODEL_SAVE_INTERVAL:
                 agents[0].save_model()
                 last_save_model_time = now
+    agents[0].save_model()
 
-################################################################
-# Episode 运行函数 - 可以修改训练逻辑，但要保持基本流程
-################################################################
-#NOTE: 可以修改训练逻辑（如评估频率、对手模型选择等），但要保持env.reset→env.step→sample_process的基本流程
+
 def run_episodes(envs, agents, logger, monitor, model_file_sync_wrapper, usr_conf):
     # hok1v1 environment
     # hok1v1环境

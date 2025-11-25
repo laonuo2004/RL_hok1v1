@@ -7,10 +7,7 @@
 Author: Tencent AI Arena Authors
 """
 
-################################################################
-# 游戏配置 - 可以修改，这里配置奖励权重和模型保存间隔
-################################################################
-#NOTE: 可以修改奖励权重，调整智能体的行为倾向
+
 class GameConfig:
     # Set the weight of each reward item and use it in reward_manager
     # 设置各个回报项的权重，在reward_manager中使用
@@ -24,6 +21,7 @@ class GameConfig:
         "kill": -0.6,
         "last_hit": 0.5,
         "forward": 0.01,
+        "backward": 0.01
     }
     # Time decay factor, used in reward_manager
     # 时间衰减因子，在reward_manager中使用
@@ -32,10 +30,7 @@ class GameConfig:
     # 模型保存间隔配置，在workflow中使用
     MODEL_SAVE_INTERVAL = 1800
 
-################################################################
-# 维度配置 - 不用改，特征维度配置（与环境返回的特征维度对应）
-################################################################
-#NOTE: 不用改，除非修改了特征处理方式，否则不要改这些维度
+
 # Dimension configuration, used when building the model
 # 维度配置，构建模型时使用
 class DimConfig:
@@ -49,10 +44,6 @@ class DimConfig:
     DIM_OF_GLOBAL_INFO = [25]
 
 
-################################################################
-# 算法配置 - 可以修改，这里配置学习率、PPO参数、网络结构等
-################################################################
-#NOTE: 可以修改这些超参数来调优算法（学习率、clip范围、LSTM层数等）
 # Configuration related to model and algorithms used
 # 模型和算法使用的相关配置
 class Config:
